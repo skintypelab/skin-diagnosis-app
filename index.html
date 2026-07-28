@@ -4873,67 +4873,53 @@ function showScreen(id){
   if(id==='screen-products') maybeShowIngredientHint();
   updateBreadcrumbLD(id);
 }
+function currentScreenId(){
+  const el = document.querySelector('.screen.active');
+  return el ? el.id : 'screen-welcome';
+}
 
 function goToAbout(){
   try{ history.pushState({screen:'about'}, '', '/about'); }catch(e){}
   showScreen('screen-about');
 }
 
-function goBackFromAbout(){
-  try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
-  showScreen('screen-welcome');
-}
+function goBackFromAbout(){ history.back(); }
 
 function goToPrivacy(){
   try{ history.pushState({screen:'privacy'}, '', '/privacy'); }catch(e){}
   showScreen('screen-privacy');
 }
-function goBackFromPrivacy(){
-  try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
-  showScreen('screen-welcome');
-}
+function goBackFromPrivacy(){ history.back(); }
 
 function goToTerms(){
   try{ history.pushState({screen:'terms'}, '', '/terms'); }catch(e){}
   showScreen('screen-terms');
 }
-function goBackFromTerms(){
-  try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
-  showScreen('screen-welcome');
-}
+function goBackFromTerms(){ history.back(); }
 
 function goToContact(){
   try{ history.pushState({screen:'contact'}, '', '/contact'); }catch(e){}
   showScreen('screen-contact');
 }
-function goBackFromContact(){
-  try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
-  showScreen('screen-welcome');
-}
+function goBackFromContact(){ history.back(); }
+
 function goToAdvertising(){
   try{ history.pushState({screen:'advertising'}, '', '/advertising'); }catch(e){}
   showScreen('screen-advertising');
 }
-function goBackFromAdvertising(){
-  try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
-  showScreen('screen-welcome');
-}
+function goBackFromAdvertising(){ history.back(); }
+
 function goToDisclaimer(){
   try{ history.pushState({screen:'disclaimer'}, '', '/disclaimer'); }catch(e){}
   showScreen('screen-disclaimer');
 }
-function goBackFromDisclaimer(){
-  try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
-  showScreen('screen-welcome');
-}
+function goBackFromDisclaimer(){ history.back(); }
+
 function goToOperator(){
   try{ history.pushState({screen:'operator'}, '', '/operator'); }catch(e){}
   showScreen('screen-operator');
 }
-function goBackFromOperator(){
-  try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
-  showScreen('screen-welcome');
-}
+function goBackFromOperator(){ history.back(); }
 
 // ───────────────────────────────
 // INGREDIENT CHIP HINT（初回のみ表示）
@@ -5002,6 +4988,9 @@ function switchToTab(tabId){
 }
 
 function goToProducts(){
+  if(currentScreenId() !== 'screen-products'){
+    try{ history.pushState({screen:'products'}, '', '/products'); }catch(e){}
+  }
   // フィルターを全リセット
   state.filters = { skinType:[], concern:[], origin:[], ingredient:[], brand:'all' };
   state.category = 'all';
@@ -6213,11 +6202,14 @@ function renderResults(){
   `;
 
   updateProductLD(firstChoice, alsoProducts);
-  try{ history.pushState({screen:'results'}, '', '/'); }catch(e){}
+  try{ history.pushState({screen:'results'}, '', '/results'); }catch(e){}
   showScreen('screen-results');
 }
 
 function goToProductsByBrand(brandKey, brandName){
+  if(currentScreenId() !== 'screen-products'){
+    try{ history.pushState({screen:'products'}, '', '/products'); }catch(e){}
+  }
   state.filters = { skinType:[], concern:[], origin:[], ingredient:[], brand: brandKey };
   state.category = 'all';
   state.recommendedMode = false;
@@ -6257,6 +6249,9 @@ function clearBrandFilter(){
 }
 
 function goToRecommended(){
+  if(currentScreenId() !== 'screen-products'){
+    try{ history.pushState({screen:'products'}, '', '/products'); }catch(e){}
+  }
   // ページモードタブの切り替え（診断済みなので全タブ表示）
   const tabRec = document.getElementById('tabRecommended');
   tabRec.style.display = '';
@@ -7261,25 +7256,39 @@ function saveCareLog(){
 // ROUTER
 // ───────────────────────────────
 (function initRouter(){
-  if(location.pathname === '/about'){
-    showScreen('screen-about');
-  } else if(location.pathname === '/quiz'){
+  const path = location.pathname;
+  const staticScreens = {
+    '/about': 'screen-about',
+    '/privacy': 'screen-privacy',
+    '/terms': 'screen-terms',
+    '/contact': 'screen-contact',
+    '/advertising': 'screen-advertising',
+    '/disclaimer': 'screen-disclaimer',
+    '/operator': 'screen-operator'
+  };
+  if(staticScreens[path]){
+    try{ history.replaceState({screen: path.slice(1)}, '', path); }catch(e){}
+    showScreen(staticScreens[path]);
+  } else if(path === '/quiz' || path === '/results' || path === '/products'){
     try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
     showScreen('screen-welcome');
   } else {
     try{ history.replaceState({screen:'welcome'}, '', location.href); }catch(e){}
   }
+
   window.addEventListener('popstate', function(e){
     const scr = e.state && e.state.screen;
-    if(scr === 'about' || location.pathname === '/about'){
-      showScreen('screen-about');
-    } else if(scr === 'results' && state.results){
-      showScreen('screen-results');
-    } else if(scr === 'quiz' && state.answers){
-      showScreen('screen-quiz');
-    } else {
-      showScreen('screen-welcome');
-    }
+    if(scr === 'about')        { showScreen('screen-about'); }
+    else if(scr === 'privacy') { showScreen('screen-privacy'); }
+    else if(scr === 'terms')   { showScreen('screen-terms'); }
+    else if(scr === 'contact') { showScreen('screen-contact'); }
+    else if(scr === 'advertising') { showScreen('screen-advertising'); }
+    else if(scr === 'disclaimer')  { showScreen('screen-disclaimer'); }
+    else if(scr === 'operator')    { showScreen('screen-operator'); }
+    else if(scr === 'results' && state.results)  { showScreen('screen-results'); }
+    else if(scr === 'quiz'    && state.answers)  { showScreen('screen-quiz'); }
+    else if(scr === 'products')    { showScreen('screen-products'); }
+    else { showScreen('screen-welcome'); }
   });
 })();
 </script>
