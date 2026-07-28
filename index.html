@@ -4953,6 +4953,7 @@ function dismissIngredientHint(){
 function startQuiz(){
   state.currentQuestion = 0;
   state.answers = new Array(questions.length).fill(null);
+  try{ history.pushState({screen:'quiz'}, '', '/quiz'); }catch(e){}
   showScreen('screen-quiz');
   renderQuestion();
   console.log('[IDX] startQuiz() — trackDiagnosisStart() 呼び出し直前');
@@ -7262,6 +7263,9 @@ function saveCareLog(){
 (function initRouter(){
   if(location.pathname === '/about'){
     showScreen('screen-about');
+  } else if(location.pathname === '/quiz'){
+    try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
+    showScreen('screen-welcome');
   } else {
     try{ history.replaceState({screen:'welcome'}, '', location.href); }catch(e){}
   }
@@ -7271,6 +7275,8 @@ function saveCareLog(){
       showScreen('screen-about');
     } else if(scr === 'results' && state.results){
       showScreen('screen-results');
+    } else if(scr === 'quiz' && state.answers){
+      showScreen('screen-quiz');
     } else {
       showScreen('screen-welcome');
     }
