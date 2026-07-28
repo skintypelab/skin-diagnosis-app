@@ -4878,48 +4878,118 @@ function currentScreenId(){
   return el ? el.id : 'screen-welcome';
 }
 
-function goToAbout(){
-  try{ history.pushState({screen:'about'}, '', '/about'); }catch(e){}
-  showScreen('screen-about');
-}
+// ── NavigationManager ────────────────────────────────────────────────────────
+// 全画面遷移の唯一の窓口。history.pushState/replaceState/popstate をここで一元管理。
+// showScreen() は DOM 操作のみ担当し、履歴操作はここが担う。
+const NavigationManager = (function(){
+  // ベースパスを動的検出: '/skin-diagnosis-app' / '' (localhost) など
+  const BASE = (function(){
+    const p = location.pathname;
+    return p.endsWith('/') ? p.slice(0, -1) : p.split('/').slice(0, -1).join('/');
+  })();
 
-function goBackFromAbout(){ history.back(); }
+  const ROUTES = {
+    welcome:     { id:'screen-welcome',     path: BASE + '/'            },
+    quiz:        { id:'screen-quiz',        path: BASE + '/quiz'        },
+    results:     { id:'screen-results',     path: BASE + '/results'     },
+    products:    { id:'screen-products',    path: BASE + '/products'    },
+    about:       { id:'screen-about',       path: BASE + '/about'       },
+    privacy:     { id:'screen-privacy',     path: BASE + '/privacy'     },
+    terms:       { id:'screen-terms',       path: BASE + '/terms'       },
+    contact:     { id:'screen-contact',     path: BASE + '/contact'     },
+    advertising: { id:'screen-advertising', path: BASE + '/advertising' },
+    disclaimer:  { id:'screen-disclaimer',  path: BASE + '/disclaimer'  },
+    operator:    { id:'screen-operator',    path: BASE + '/operator'    }
+  };
 
-function goToPrivacy(){
-  try{ history.pushState({screen:'privacy'}, '', '/privacy'); }catch(e){}
-  showScreen('screen-privacy');
-}
-function goBackFromPrivacy(){ history.back(); }
+  function navigate(key, opts){
+    opts = opts || {};
+    const route = ROUTES[key];
+    if(!route){ console.warn('[NAV] unknown key:', key); return; }
 
-function goToTerms(){
-  try{ history.pushState({screen:'terms'}, '', '/terms'); }catch(e){}
-  showScreen('screen-terms');
-}
-function goBackFromTerms(){ history.back(); }
+    const fromId  = currentScreenId();
+    const willPush = !opts.replace && fromId !== route.id;
 
-function goToContact(){
-  try{ history.pushState({screen:'contact'}, '', '/contact'); }catch(e){}
-  showScreen('screen-contact');
-}
-function goBackFromContact(){ history.back(); }
+    console.log('[History] navigate:', key, '| from:', fromId, '| push:', willPush, '| history.length before:', history.length);
 
-function goToAdvertising(){
-  try{ history.pushState({screen:'advertising'}, '', '/advertising'); }catch(e){}
-  showScreen('screen-advertising');
-}
-function goBackFromAdvertising(){ history.back(); }
+    if(willPush){
+      try{
+        history.pushState({ screen: key }, '', route.path);
+        console.log('[History] push:', history.state, '| history.length after:', history.length);
+      }catch(err){
+        console.warn('[History] pushState FAILED:', err.name, err.message);
+      }
+    } else if(opts.replace){
+      try{
+        history.replaceState({ screen: key }, '', route.path);
+        console.log('[History] replace:', history.state);
+      }catch(err){
+        console.warn('[History] replaceState FAILED:', err.name, err.message);
+      }
+    }
 
-function goToDisclaimer(){
-  try{ history.pushState({screen:'disclaimer'}, '', '/disclaimer'); }catch(e){}
-  showScreen('screen-disclaimer');
-}
-function goBackFromDisclaimer(){ history.back(); }
+    showScreen(route.id);
+  }
 
-function goToOperator(){
-  try{ history.pushState({screen:'operator'}, '', '/operator'); }catch(e){}
-  showScreen('screen-operator');
-}
-function goBackFromOperator(){ history.back(); }
+  function back(){ history.back(); }
+
+  function init(){
+    const path = location.pathname;
+    let initialKey = 'welcome';
+    for(const key of Object.keys(ROUTES)){
+      const r = ROUTES[key];
+      if(path === r.path || path === r.path.replace(/\/$/, '') || path + '/' === r.path){
+        initialKey = key;
+        break;
+      }
+    }
+
+    const STATIC = ['about','privacy','terms','contact','advertising','disclaimer','operator'];
+    if(STATIC.includes(initialKey)){
+      navigate(initialKey, { replace: true });
+    } else {
+      navigate('welcome', { replace: true });
+    }
+
+    window.addEventListener('popstate', function(e){
+      const scr = e.state && e.state.screen;
+      const route = scr ? ROUTES[scr] : null;
+      console.log('[History] pop:', e.state, '| pathname:', location.pathname, '| history.length:', history.length);
+
+      if(!route){ showScreen(ROUTES.welcome.id); return; }
+      if(scr === 'results' && !state.results){ showScreen(ROUTES.welcome.id); return; }
+      if(scr === 'quiz'    && !state.answers){ showScreen(ROUTES.welcome.id); return; }
+
+      console.log('[History] screen:', route.id);
+      showScreen(route.id);
+    });
+
+    console.log('[NAV] init | BASE:', BASE, '| initial:', initialKey, '| history.length:', history.length);
+  }
+
+  return { navigate, back, init };
+})();
+
+function goToAbout()       { NavigationManager.navigate('about'); }
+function goBackFromAbout() { NavigationManager.back(); }
+
+function goToPrivacy()       { NavigationManager.navigate('privacy'); }
+function goBackFromPrivacy() { NavigationManager.back(); }
+
+function goToTerms()       { NavigationManager.navigate('terms'); }
+function goBackFromTerms() { NavigationManager.back(); }
+
+function goToContact()       { NavigationManager.navigate('contact'); }
+function goBackFromContact() { NavigationManager.back(); }
+
+function goToAdvertising()       { NavigationManager.navigate('advertising'); }
+function goBackFromAdvertising() { NavigationManager.back(); }
+
+function goToDisclaimer()       { NavigationManager.navigate('disclaimer'); }
+function goBackFromDisclaimer() { NavigationManager.back(); }
+
+function goToOperator()       { NavigationManager.navigate('operator'); }
+function goBackFromOperator() { NavigationManager.back(); }
 
 // ───────────────────────────────
 // INGREDIENT CHIP HINT（初回のみ表示）
@@ -4939,8 +5009,7 @@ function dismissIngredientHint(){
 function startQuiz(){
   state.currentQuestion = 0;
   state.answers = new Array(questions.length).fill(null);
-  try{ history.pushState({screen:'quiz'}, '', '/quiz'); }catch(e){}
-  showScreen('screen-quiz');
+  NavigationManager.navigate('quiz');
   renderQuestion();
   console.log('[IDX] startQuiz() — trackDiagnosisStart() 呼び出し直前');
   AnalyticsService.trackDiagnosisStart();
@@ -4952,7 +5021,7 @@ function restartApp(){
   state.results = null;
   state.filters = { skinType:[], concern:[], origin:[], ingredient:[], brand:'all' };
   state.category = 'all';
-  showScreen('screen-welcome');
+  NavigationManager.navigate('welcome');
 }
 
 function shareResults(){
@@ -4988,9 +5057,6 @@ function switchToTab(tabId){
 }
 
 function goToProducts(){
-  if(currentScreenId() !== 'screen-products'){
-    try{ history.pushState({screen:'products'}, '', '/products'); }catch(e){}
-  }
   // フィルターを全リセット
   state.filters = { skinType:[], concern:[], origin:[], ingredient:[], brand:'all' };
   state.category = 'all';
@@ -5027,7 +5093,7 @@ function goToProducts(){
 
   document.getElementById('brandTabContent').style.display = 'none';
   document.getElementById('productPane').style.display = '';
-  showScreen('screen-products');
+  NavigationManager.navigate('products');
   applyFilters();
 }
 
@@ -6202,14 +6268,10 @@ function renderResults(){
   `;
 
   updateProductLD(firstChoice, alsoProducts);
-  try{ history.pushState({screen:'results'}, '', '/results'); }catch(e){}
-  showScreen('screen-results');
+  NavigationManager.navigate('results');
 }
 
 function goToProductsByBrand(brandKey, brandName){
-  if(currentScreenId() !== 'screen-products'){
-    try{ history.pushState({screen:'products'}, '', '/products'); }catch(e){}
-  }
   state.filters = { skinType:[], concern:[], origin:[], ingredient:[], brand: brandKey };
   state.category = 'all';
   state.recommendedMode = false;
@@ -6237,7 +6299,7 @@ function goToProductsByBrand(brandKey, brandName){
 
   document.getElementById('brandTabContent').style.display = 'none';
   document.getElementById('productPane').style.display = '';
-  showScreen('screen-products');
+  NavigationManager.navigate('products');
   applyFilters();
 }
 
@@ -6249,9 +6311,6 @@ function clearBrandFilter(){
 }
 
 function goToRecommended(){
-  if(currentScreenId() !== 'screen-products'){
-    try{ history.pushState({screen:'products'}, '', '/products'); }catch(e){}
-  }
   // ページモードタブの切り替え（診断済みなので全タブ表示）
   const tabRec = document.getElementById('tabRecommended');
   tabRec.style.display = '';
@@ -6274,7 +6333,7 @@ function goToRecommended(){
 
   document.getElementById('brandTabContent').style.display = 'none';
   document.getElementById('productPane').style.display = '';
-  showScreen('screen-products');
+  NavigationManager.navigate('products');
 
   // サブタイトル更新
   const { primaryType, concerns } = state.results;
@@ -7255,42 +7314,7 @@ function saveCareLog(){
 // ───────────────────────────────
 // ROUTER
 // ───────────────────────────────
-(function initRouter(){
-  const path = location.pathname;
-  const staticScreens = {
-    '/about': 'screen-about',
-    '/privacy': 'screen-privacy',
-    '/terms': 'screen-terms',
-    '/contact': 'screen-contact',
-    '/advertising': 'screen-advertising',
-    '/disclaimer': 'screen-disclaimer',
-    '/operator': 'screen-operator'
-  };
-  if(staticScreens[path]){
-    try{ history.replaceState({screen: path.slice(1)}, '', path); }catch(e){}
-    showScreen(staticScreens[path]);
-  } else if(path === '/quiz' || path === '/results' || path === '/products'){
-    try{ history.replaceState({screen:'welcome'}, '', '/'); }catch(e){}
-    showScreen('screen-welcome');
-  } else {
-    try{ history.replaceState({screen:'welcome'}, '', location.href); }catch(e){}
-  }
-
-  window.addEventListener('popstate', function(e){
-    const scr = e.state && e.state.screen;
-    if(scr === 'about')        { showScreen('screen-about'); }
-    else if(scr === 'privacy') { showScreen('screen-privacy'); }
-    else if(scr === 'terms')   { showScreen('screen-terms'); }
-    else if(scr === 'contact') { showScreen('screen-contact'); }
-    else if(scr === 'advertising') { showScreen('screen-advertising'); }
-    else if(scr === 'disclaimer')  { showScreen('screen-disclaimer'); }
-    else if(scr === 'operator')    { showScreen('screen-operator'); }
-    else if(scr === 'results' && state.results)  { showScreen('screen-results'); }
-    else if(scr === 'quiz'    && state.answers)  { showScreen('screen-quiz'); }
-    else if(scr === 'products')    { showScreen('screen-products'); }
-    else { showScreen('screen-welcome'); }
-  });
-})();
+NavigationManager.init();
 </script>
 </body>
 </html>
