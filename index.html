@@ -5104,6 +5104,7 @@ function renderQuestion(){
   const idx = state.currentQuestion;
   const total = questions.length;
 
+  AnalyticsService.trackQuizQuestionReached(idx, total);
   document.getElementById('progressFill').style.width = `${((idx)/total)*100}%`;
   document.getElementById('quizStep').textContent = `${idx+1} / ${total}`;
   document.getElementById('btnPrev').style.display = idx===0 ? 'none' : 'flex';
@@ -6421,6 +6422,7 @@ function setFilter(type, value, btn){
       btn.classList.add('active');
     }
   }
+  AnalyticsService.trackFilterUse(type, value);
   applyFilters();
 }
 
@@ -6437,6 +6439,7 @@ function toggleConcern(value, btn){
     const v = b.dataset.value;
     b.classList.toggle('active', v === 'all' ? sel.length === 0 : sel.indexOf(v) > -1);
   });
+  AnalyticsService.trackFilterUse('concern', value);
   applyFilters();
 }
 
@@ -7314,6 +7317,16 @@ function saveCareLog(){
 // ROUTER
 // ───────────────────────────────
 NavigationManager.init();
+
+// quiz_abandon: 診断中にタブ切替・画面消灯・ブラウザ終了で離脱したときに記録
+document.addEventListener('visibilitychange', function(){
+  if(document.visibilityState === 'hidden'){
+    const quizInProgress = state.results === null && state.answers.some(function(a){ return a !== null; });
+    if(quizInProgress){
+      AnalyticsService.trackQuizAbandon(state.currentQuestion);
+    }
+  }
+});
 </script>
 </body>
 </html>

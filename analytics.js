@@ -177,6 +177,28 @@
     dispatch('share', { method: method, target: target });
   }
 
+  function trackQuizQuestionReached(questionIndex, totalQuestions) {
+    dispatch('quiz_question_reached', {
+      question_index: questionIndex,
+      question_number: questionIndex + 1,
+      total_questions: totalQuestions
+    });
+  }
+
+  function trackQuizAbandon(questionIndex) {
+    dispatch('quiz_abandon', {
+      question_index: questionIndex,
+      question_number: questionIndex + 1
+    });
+  }
+
+  function trackFilterUse(filterType, filterValue) {
+    dispatch('filter_use', {
+      filter_type: filterType,
+      filter_value: filterValue
+    });
+  }
+
   // ── 公開インターフェース ───────────────────────────────────
   global.AnalyticsService = {
     init: init,
@@ -187,7 +209,10 @@
     trackIngredientClick: trackIngredientClick,
     trackShopClick: trackShopClick,
     trackSearch: trackSearch,
-    trackShare: trackShare
+    trackShare: trackShare,
+    trackQuizQuestionReached: trackQuizQuestionReached,
+    trackQuizAbandon: trackQuizAbandon,
+    trackFilterUse: trackFilterUse
   };
 
   global.AnalyticsService.init();
