@@ -4125,7 +4125,7 @@ const products = [
     gradient:'linear-gradient(135deg,#C88AB0,#E8B8D8)'
   },
   {
-    id:'t24',brand:'エリクシール',name:'シュペリエル バウンシング モイスト ローション II',
+    id:'t24b',brand:'エリクシール',name:'シュペリエル バウンシング モイスト ローション II',
     category:'toner',skinTypes:['dry','normal','aging'],concerns:['aging','moisture'],
     description:'独自のリンクルドリンク成分配合の薬用化粧水。ハリとうるおいを与えながら、肌をぷるんとした弾力のある状態へ整えるエイジングケアライン定番品。',
     volume:'150ml',isKorean:false,
@@ -5027,7 +5027,7 @@ function shareResults(){
   if(!state.results) return;
   const label = skinTypeInfo[state.results.primaryType]?.label || '';
   const shareText = `私の肌タイプは「${label}」でした！SKIN TYPE LABで無料診断 →`;
-  const shareUrl = location.origin + '/';
+  const shareUrl = SITE_BASE + '/';
   if(navigator.share){
     navigator.share({ title:'SKIN TYPE LAB', text:shareText, url:shareUrl })
       .then(()=>AnalyticsService.trackShare('web_share','results'))
